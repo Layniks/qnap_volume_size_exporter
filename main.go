@@ -81,7 +81,7 @@ func fetchMetrics(host string, sid string) ([]Metric, error) {
     // Make HTTP GET request
     resp, err := http.Get(apiURL)
     if err != nil {
-	return nil, fmt.Errorf("failed to fetch metrics: %v", err)
+		return nil, fmt.Errorf("failed to fetch metrics: %v", err)
     }
     defer resp.Body.Close()
 
@@ -95,7 +95,7 @@ func fetchMetrics(host string, sid string) ([]Metric, error) {
     var metrics []Metric
     err = json.Unmarshal(body, &metrics)
     if err != nil {
-	return nil, fmt.Errorf("failed to parse JSON: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON: %v", err)
     }
 
     return metrics, nil
@@ -126,44 +126,40 @@ func updateMetrics(host string, sid string) {
 
 func checkSID (host string, sid string) {
     apiURL := "https://" + host + ".coresvc.tech/cgi-bin/filemanager/utilRequest.cgi?func=check_sid&sid=" + sid
-    i := 0
 
     for {
-	i += 1
-
-	// Make HTTP GET request
-	resp, err := http.Get(apiURL)
-	if err != nil {
-	    log.Printf("failed to check sid: %v", err)
-            time.Sleep(10 * time.Second) // Wait before retrying
-            continue
+		// Make HTTP GET request
+		resp, err := http.Get(apiURL)
+		if err != nil {
+		    log.Printf("failed to check sid: %v", err)
+	            time.Sleep(10 * time.Second) // Wait before retrying
+	            continue
+		}
+		defer resp.Body.Close()
+	
+		// Read the response body
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+		    log.Printf("failed to read checkSID response body: %v", err)
+	            time.Sleep(10 * time.Second) // Wait before retrying
+	            continue
+		}
+	
+		var status map[string]any
+	        err = json.Unmarshal(body, &status)
+		if err != nil {
+	    	    log.Printf("failed to parse checkSID JSON: %v", err)
+	            time.Sleep(10 * time.Second) // Wait before retrying
+	            continue
+		}
+	
+		if (i > 5 || status["status"] != 1.0) {
+		    log.Println("Error with checking SID. Restarting...")
+		    os.Exit(1)
+		}
+	
+		time.Sleep(180 * time.Second)
 	}
-	defer resp.Body.Close()
-
-	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-	    log.Printf("failed to read checkSID response body: %v", err)
-            time.Sleep(10 * time.Second) // Wait before retrying
-            continue
-	}
-
-	var status map[string]any
-        err = json.Unmarshal(body, &status)
-	if err != nil {
-    	    log.Printf("failed to parse checkSID JSON: %v", err)
-            time.Sleep(10 * time.Second) // Wait before retrying
-            continue
-	}
-
-	if (i > 5 || status["status"] != 1.0) {
-	    log.Println("Error with checking SID. Restarting...")
-	    os.Exit(1)
-	}
-
-	i = 0
-	time.Sleep(180 * time.Second)
-    }
 }
 
 func getSID (host string, qtoken string) (sid string, err error) {
@@ -196,24 +192,22 @@ func getSID (host string, qtoken string) (sid string, err error) {
 }
 
 func main() {
-    sid1, err := getSID("mskpqnap01", "76f41492679fc76bb1002723a24eaaaf")
+    hostname := flag.String("hostname", "", "QNAP hostname")
+    token := flag.String("token", "", "Token for authentication")
+    port := flag.String("port", "", "On which port run exporter")
+    flag.Parse()
+	
+    sid, err := getSID(hostname, token)
     if err != nil {
-	fmt.Errorf(err.Error())
-    }
-    sid2, err := getSID("mskpqnap02", "049df3ccaabe08a5e0d93af340ba3a10")
-    if err != nil {
-	fmt.Errorf(err.Error())
+		fmt.Errorf(err.Error())
     }
 
     // Start a goroutine to update metrics periodically
-    go checkSID("mskpqnap01", sid1)
-    go updateMetrics("mskpqnap01", sid1)
-
-    go checkSID("mskpqnap02", sid2)
-    go updateMetrics("mskpqnap02", sid2)
+    go checkSID(hostname, sid)
+    go updateMetrics(hostname, sid)
 
     // Expose Prometheus metrics endpoint
     http.Handle("/metrics", promhttp.Handler())
-    log.Println("Starting server on :1313...")
-    log.Fatal(http.ListenAndServe(":1313", nil))
+    log.Println("Starting service...")
+    log.Fatal(http.ListenAndServe(port, nil))
 }
