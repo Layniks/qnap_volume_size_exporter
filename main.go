@@ -193,7 +193,7 @@ func getSID (host string, qtoken string) (sid string, err error) {
 
 func main() {
     hostname := flag.String("hostname", "", "QNAP hostname")
-	qnap_user := flag.String("qnap_user", "", "QNAP read-only user to get data)
+	qnap_user := flag.String("qnap_user", "", "QNAP read-only user to get data")
     token := flag.String("token", "", "Token for authentication")
     port := flag.String("port", "", "On which port run exporter")
     flag.Parse()
