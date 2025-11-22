@@ -33,12 +33,12 @@ type Auth struct {
 
 func convertSize(size float64, unit string) float64 {
     switch unit {
-    case "MB":
-	return size * 1024
-    case "GB":
-	return size * 1048576
-    default:
-	return size * 1073741824
+	    case "MB":
+			return size * 1024
+	    case "GB":
+			return size * 1048576
+	    default:
+			return size * 1073741824
     }
 }
 
@@ -76,7 +76,7 @@ func init() {
 
 // Function to fetch metrics from the API
 func fetchMetrics(host string, sid string) ([]Metric, error) {
-    apiURL := "https://"+ host + ".coresvc.tech/cgi-bin/filemanager/utilRequest.cgi?sid=" + sid + "&func=get_tree&is_iso=no&node=vol_root"
+    apiURL := "https://" + host + "/cgi-bin/filemanager/utilRequest.cgi?sid=" + sid + "&func=get_tree&is_iso=no&node=vol_root"
 
     // Make HTTP GET request
     resp, err := http.Get(apiURL)
@@ -125,7 +125,7 @@ func updateMetrics(host string, sid string) {
 }
 
 func checkSID (host string, sid string) {
-    apiURL := "https://" + host + ".coresvc.tech/cgi-bin/filemanager/utilRequest.cgi?func=check_sid&sid=" + sid
+    apiURL := "https://" + host + "/cgi-bin/filemanager/utilRequest.cgi?func=check_sid&sid=" + sid
 
     for {
 		// Make HTTP GET request
@@ -163,7 +163,7 @@ func checkSID (host string, sid string) {
 }
 
 func getSID (host string, qtoken string) (sid string, err error) {
-    apiURL := "https://" + host + ".coresvc.tech/cgi-bin/authLogin.cgi?user=grafana&qtoken=" + qtoken + "&remme=1"
+    apiURL := "https://" + host + "/cgi-bin/authLogin.cgi?user=" + qnap_user + "&qtoken=" + qtoken + "&remme=1"
 
     // Make HTTP GET request
     resp, err := http.Get(apiURL)
@@ -193,6 +193,7 @@ func getSID (host string, qtoken string) (sid string, err error) {
 
 func main() {
     hostname := flag.String("hostname", "", "QNAP hostname")
+	qnap_user := flag.String("qnap_user", "", "QNAP read-only user to get data)
     token := flag.String("token", "", "Token for authentication")
     port := flag.String("port", "", "On which port run exporter")
     flag.Parse()
