@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "encoding/xml"
     "fmt"
+	"flag"
     "io/ioutil"
     "log"
     "net/http"
@@ -153,7 +154,7 @@ func checkSID (host string, sid string) {
 	            continue
 		}
 	
-		if (i > 5 || status["status"] != 1.0) {
+		if (status["status"] != 1.0) {
 		    log.Println("Error with checking SID. Restarting...")
 		    os.Exit(1)
 		}
@@ -162,7 +163,7 @@ func checkSID (host string, sid string) {
 	}
 }
 
-func getSID (host string, qtoken string) (sid string, err error) {
+func getSID (host string, qnap_user string, qtoken string) (sid string, err error) {
     apiURL := "https://" + host + "/cgi-bin/authLogin.cgi?user=" + qnap_user + "&qtoken=" + qtoken + "&remme=1"
 
     // Make HTTP GET request
@@ -198,17 +199,17 @@ func main() {
     port := flag.String("port", "", "On which port run exporter")
     flag.Parse()
 	
-    sid, err := getSID(hostname, token)
+    sid, err := getSID(*hostname, *qnap_user, *token)
     if err != nil {
 		fmt.Errorf(err.Error())
     }
 
     // Start a goroutine to update metrics periodically
-    go checkSID(hostname, sid)
-    go updateMetrics(hostname, sid)
+    go checkSID(*hostname, sid)
+    go updateMetrics(*hostname, sid)
 
     // Expose Prometheus metrics endpoint
     http.Handle("/metrics", promhttp.Handler())
     log.Println("Starting service...")
-    log.Fatal(http.ListenAndServe(port, nil))
+    log.Fatal(http.ListenAndServe(*port, nil))
 }
